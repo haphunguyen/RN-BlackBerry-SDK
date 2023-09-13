@@ -41,6 +41,9 @@
 
 package org.java_websocket.client;
 
+import com.good.gd.GDAndroid;
+import com.good.gd.GDAppEvent;
+import com.good.gd.GDAppEventListener;
 import com.good.gd.net.GDSocket;
 
 import java.io.IOException;
@@ -453,22 +456,22 @@ public abstract class WebSocketClient extends AbstractWebSocket implements Runna
 		engine.sendPing( );
 	}
 
-	public void run() {
+	private void connectSocket() {
 		InputStream istream;
 		try {
-			if( socket == null ) {
+			if (socket == null) {
 				socket = new GDSocket(uri.toString().startsWith("wss://") ? true : false);
-			} else if( socket.isClosed() ) {
+			} else if (socket.isClosed()) {
 				throw new IOException();
 			}
 
-			socket.setTcpNoDelay( isTcpNoDelay() );
-			socket.setReuseAddress( isReuseAddr() );
+			socket.setTcpNoDelay(isTcpNoDelay());
+			socket.setReuseAddress(isReuseAddr());
 
-			if( !socket.isBound() ) {
+			if (!socket.isBound()) {
 				InetSocketAddress inetSockAddr = InetSocketAddress.createUnresolved(
-                                                                    uri.getHost(), getPort());
-                WSLog.d(this, "run: connect using inetSockAddr = " + inetSockAddr.toString());
+						uri.getHost(), getPort());
+				WSLog.d(this, "run: connect using inetSockAddr = " + inetSockAddr.toString());
 				socket.connect(inetSockAddr, connectTimeout);
 			}
 
@@ -476,9 +479,9 @@ public abstract class WebSocketClient extends AbstractWebSocket implements Runna
 			ostream = socket.getOutputStream();
 
 			sendHandshake();
-		} catch ( /*IOException | SecurityException | UnresolvedAddressException | InvalidHandshakeException | ClosedByInterruptException | SocketTimeoutException */Exception e ) {
-			onWebsocketError( engine, e );
-			engine.closeConnection( CloseFrame.NEVER_CONNECTED, e.getMessage() );
+		} catch ( /*IOException | SecurityException | UnresolvedAddressException | InvalidHandshakeException | ClosedByInterruptException | SocketTimeoutException */Exception e) {
+			onWebsocketError(engine, e);
+			engine.closeConnection(CloseFrame.NEVER_CONNECTED, e.getMessage());
 			return;
 		} catch (InternalError e) {
 			// https://bugs.openjdk.java.net/browse/JDK-8173620
@@ -491,25 +494,35 @@ public abstract class WebSocketClient extends AbstractWebSocket implements Runna
 			throw e;
 		}
 
-		writeThread = new Thread( new WebsocketWriteThread(this) );
+		writeThread = new Thread(new WebsocketWriteThread(this));
 		writeThread.start();
 
-		byte[] rawbuffer = new byte[ WebSocketImpl.RCVBUF ];
+		byte[] rawbuffer = new byte[WebSocketImpl.RCVBUF];
 		int readBytes;
 
 		try {
-			while ( !isClosing() && !isClosed() && ( readBytes = istream.read( rawbuffer ) ) != -1 ) {
-				engine.decode( ByteBuffer.wrap( rawbuffer, 0, readBytes ) );
+			while (!isClosing() && !isClosed() && (readBytes = istream.read(rawbuffer)) != -1) {
+				engine.decode(ByteBuffer.wrap(rawbuffer, 0, readBytes));
 			}
 			engine.eot();
-		} catch ( IOException e ) {
+		} catch (IOException e) {
 			handleIOException(e);
-		} catch ( RuntimeException e ) {
+		} catch (RuntimeException e) {
 			// this catch case covers internal errors only and indicates a bug in this websocket implementation
-			onError( e );
-			engine.closeConnection( CloseFrame.ABNORMAL_CLOSE, e.getMessage() );
+			onError(e);
+			engine.closeConnection(CloseFrame.ABNORMAL_CLOSE, e.getMessage());
 		}
 		connectReadThread = null;
+	}
+
+	public void run() {
+		GDAndroid.getInstance().authorize(new GDAppEventListener() {
+        @Override
+        public void onGDEvent(GDAppEvent gdAppEvent) {
+			connectSocket();
+        }
+    });
+
 	}
 
 	/**

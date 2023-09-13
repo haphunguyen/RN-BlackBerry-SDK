@@ -121,7 +121,7 @@ public class BbdRNFileSystemModule extends ReactContextBaseJavaModule {
     return originalFilepath;
   }
 
-  private InputStream getInputStream(String filepath) throws IORejectionException {
+  public InputStream getInputStream(String filepath) throws IORejectionException {
     Uri uri = getFileUri(filepath, false);
     InputStream stream;
 
