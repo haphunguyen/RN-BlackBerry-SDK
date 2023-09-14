@@ -16,7 +16,7 @@
 
 package com.blackberry.bbd.reactnative.filesystem;
 
-class IORejectionException extends Exception {
+public class IORejectionException extends Exception {
     private String code;
 
     public IORejectionException(String code, String message) {
